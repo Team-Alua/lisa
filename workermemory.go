@@ -1,29 +1,34 @@
 package main
 
 type WorkerMemory struct {
-	titleIdSlots [16]string
-	activeTitleIds map[string]bool
+	slots [16]string
+	activeSlotName map[string]bool
+	clientQueue []*SaveClient
 }
 
 
-// RegisterTitleId takes a titleId and assigns a slot to it.
-// If the titleId is empty, it will return -2
-// If the titleId is already registered, it will return -1.
+func (wm * WorkerMemory) Initialize() {
+	wm.activeSlotName = make(map[string]bool)
+	wm.clientQueue = make([]*SaveClient, 0)
+}
+
+// ReserveSlot takes a slotName and assigns a slot to it.
+// If the slotName is already registered, it will return -1.
 // If there are no free slots, it will also return -1.
 // Otherwise it return a slot index starting at zero.
-func (wm * WorkerMemory) RegisterTitleId(titleId string) int {
-	if titleId == "" {
-		return -2
+func (wm * WorkerMemory) ReserveSlot(slotName string) int {
+	if slotName == "" {
+		panic("Title Id was an empty string.")
 	}
 
-	if _, ok := wm.activeTitleIds[titleId]; ok {
+	if _, ok := wm.activeSlotName[slotName]; ok {
 		return -1
 	}
 
-	for index, key := range wm.titleIdSlots {
+	for index, key := range wm.slots {
 		if key == "" {
-			wm.titleIdSlots[index] = titleId
-			wm.activeTitleIds[titleId] = true
+			wm.slots[index] = slotName
+			wm.activeSlotName[slotName] = true
 			return index
 		}
 	}
@@ -33,11 +38,24 @@ func (wm * WorkerMemory) RegisterTitleId(titleId string) int {
 // FreeSlot takes a slot index and disassociates itself with the assigned title id.
 // Freeing an empty slot is a no op.
 func (wm * WorkerMemory) FreeSlot(index int) {
-	titleId := wm.titleIdSlots[index]
-	if titleId == "" {
+	slotName := wm.slots[index]
+	if slotName == "" {
 		return
 	}
-	delete(wm.activeTitleIds, titleId)
-	wm.titleIdSlots[index] = ""
+	delete(wm.activeSlotName, slotName)
+	wm.slots[index] = ""
 	return
+}
+
+func (wm * WorkerMemory) AddToQueue(client *SaveClient) {
+	wm.clientQueue = append(wm.clientQueue, client)
+}
+
+func (wm * WorkerMemory) GetClientFromQueue() *SaveClient {
+	if len(wm.clientQueue) > 0 {
+		client := wm.clientQueue[0]
+		wm.clientQueue = wm.clientQueue[1:]
+		return client
+	}
+	return nil
 }
