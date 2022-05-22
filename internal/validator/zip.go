@@ -123,6 +123,8 @@ func CheckZip(zipPath string) error {
 	if err != nil {
 		return err
 	}
+	defer cRc.Close()
+
 	var content client.Content
 	dec := yaml.NewDecoder(cRc)
 
