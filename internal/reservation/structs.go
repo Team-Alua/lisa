@@ -15,10 +15,7 @@ type Request struct {
 type ResponseType int64
 
 const (
-	Info ResponseType = iota
-	Error
-	Warning
-	Ready
+	Ready ResponseType = iota
 	NotReady
 )
 
@@ -29,7 +26,7 @@ type Response struct {
 
 type Slot struct {
 	Id string
-	Out chan<- Response
+	Out chan Response
 }
 
 type System struct {

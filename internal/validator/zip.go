@@ -112,12 +112,7 @@ func checkZipFolderStructure(rc * zip.ReadCloser, content * client.Content) erro
 	return nil
 }
 
-func CheckZip(zipPath string) error {
-	rc, err :=  zip.OpenReader(zipPath)
-	if err != nil {
-		return err
-	}
-	defer rc.Close()
+func CheckZip(rc * zip.ReadCloser) error {
 
 	cRc, err := rc.Open("content.yml")
 	if err != nil {
