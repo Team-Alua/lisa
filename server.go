@@ -9,32 +9,53 @@ import (
 	"os"
 	"io"
 	"fmt"
+	"github.com/Team-Alua/lisa/internal/reservation"
 	"github.com/Team-Alua/lisa/internal/validator"
 )
 
-type CommandResponse struct {
-	zipOutPath string
-	err error
-}
 
-type CommandRequest struct {
-	zipPath string
-	out chan *CommandResponse
-}
 
-func ListenForCommandRequests(r chan *CommandRequest) {
+func ListenForReservationRequests(r <-chan *reservation.Request) {
+	rs := reservation.System{}
+	rs.Initialize()
+
 	for {
-		request := <- r
-		go func(req * CommandRequest) {
+		rr := <-r
+		if rr.Type == reservation.Add {
+			o := rr.Value.Out
+			if !rs.Add(rr.Value) {
+				o <- reservation.Response{Type:reservation.NotReady, Msg: ""}
+				rs.SortQueue()
+			} else {
+				o <- reservation.Response{Type:reservation.Ready, Msg: ""}
+			}
+		} else if rr.Type == reservation.Remove {
+			if !rs.RemoveFromSlot(rr.Value) {
+				rs.RemoveFromQueue(rr.Value)
+				continue
+			}
 
-		}(request)
+			c := rs.ChooseReservationFromQueue()
+			// No candidates
+			if c == nil {
+				continue
+			}
+
+			rs.RemoveFromQueue(c)
+			if !rs.Add(c) {
+				panic("Something terrible happened")
+			}
+			c.Out <- reservation.Response{Type:reservation.Ready, Msg: ""}
+			rs.SortQueue()
+		}
 	}
+
 }
 
 func Listen() {
-	cr := make(chan *CommandRequest)
-	go ListenForCommandRequests(cr)
-	
+	rr := make(chan *reservation.Request)
+
+	go ListenForReservationRequests(rr)
 	l, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
 		panic(err)
@@ -46,7 +67,7 @@ func Listen() {
 			panic(err)
 		}
 
-		go handleRequest(conn)
+		go handleRequest(conn, rr)
 	}
 }
 
@@ -84,7 +105,7 @@ func downloadZip(clientConn net.Conn) (string, error) {
 	return zipName, nil
 }
 
-func handleRequest(clientConn net.Conn) {
+func handleRequest(clientConn net.Conn, rr chan*reservation.Request) {
 	defer clientConn.Close()
 
 	zipName, err := downloadZip(clientConn)
