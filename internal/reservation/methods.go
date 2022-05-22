@@ -54,6 +54,9 @@ func (rs * System) SortQueue() {
 	visited := map[string]bool{}
 
 	for _, slotElement := range rs.slots {
+		if slotElement == nil {
+			continue
+		}
 		visited[slotElement.Id] = true
 	}
 
@@ -100,7 +103,7 @@ func (rs * System) SortQueue() {
 		}
 
 		temp := rs.queue[i]
-
+		visited[temp.Id] = true
 		// Move all elements back
 		for j := i; j > marker; j-- {
 			rs.queue[j] = rs.queue[j - 1]
