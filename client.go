@@ -98,23 +98,33 @@ func handleCommandExecution(clientConn net.Conn, cecieIpPort string, rc * zip.Re
 		return "", err
 	}
 	decoder := yaml.NewDecoder(cRc)
-	var content * client.Content
+	var content client.Content
 	if err = decoder.Decode(&content); err != nil {
 		return "", err
 	}
-	rs := reservation.Slot{Id: content.Target.TitleId + "-" + content.Target.DirectoryName, Out: make(chan reservation.Response)}
-	rr <- &reservation.Request{Type: reservation.Add, Value: &rs}
+
+	responseChan := make(chan reservation.Response) 
+	rs := reservation.Slot{Id: content.Target.TitleId + "-" + content.Target.DirectoryName, Out: responseChan}
+	myRR := reservation.Request{Type: reservation.Add, Value: &rs} 
+	rr <- &myRR
 
 	for isReady := false; !isReady; {
 		response := <- rs.Out
 		switch(response.Type) {
 		case reservation.Ready:
+			fmt.Println("Ready!")
 			// Put into slot array
 			isReady = true
 		case reservation.NotReady:
+			fmt.Println("Not ready!")
 			// Put into queue
 		}
 	}
+
+	defer func() {
+		removedRR := reservation.Request{Type: reservation.Remove, Value: &rs}
+		rr <- &removedRR
+	}()
 
 	cc := cecie.Connection{}
 	if err := cc.Connect(cecieIpPort); err != nil {
@@ -124,13 +134,20 @@ func handleCommandExecution(clientConn net.Conn, cecieIpPort string, rc * zip.Re
 	defer cc.Close()
 
 
-	_ = command.Execute(&cc, content, rc)
+	zipName, err := command.Execute(&cc, &content, rc)
+	
+	if err != nil {
+		if zipName != "" {
+			// os.Remove(zipName)
+		}
+		return "", err
+	}
 
-	rr <- &reservation.Request{Type: reservation.Remove, Value: &rs}
-	return "", nil
+	return zipName, nil
 }
 
 func handleRequest(clientConn net.Conn, rr chan*reservation.Request, cecieIpPort string) {
+	fmt.Println("Handling new request!")
 	defer clientConn.Close()
 
 	zipName, err := downloadZip(clientConn)
@@ -143,6 +160,10 @@ func handleRequest(clientConn net.Conn, rr chan*reservation.Request, cecieIpPort
 		fmt.Println(err)
 		return
 	}
+	defer func() {
+		os.Remove(zipName)
+	}()
+
 	defer rc.Close()
 
 	// defer os.Remove(zipName)
@@ -153,7 +174,8 @@ func handleRequest(clientConn net.Conn, rr chan*reservation.Request, cecieIpPort
 		return
 	} 
 	outZip, err := handleCommandExecution(clientConn, cecieIpPort,  rc, rr)
-	fmt.Println(outZip)
+	fmt.Println(outZip, err)
+	clientConn.Close()
 	// Send back response
 }
 

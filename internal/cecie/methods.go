@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
 	"io"
 	"io/fs"
 	"encoding/binary"
 	"github.com/Team-Alua/lisa/internal/client"
 )
 func (c * Connection) Connect(addr string) error {
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.DialTimeout("tcp", addr, 5 * time.Second)
 	if err != nil {
 		return err
 	}
@@ -47,22 +48,29 @@ func (c * Connection) SendFileHeader(path string, size uint64) error {
 }
 
 func (c * Connection) SendFile(f fs.File) error {
-	n, err := io.Copy(c.conn, f)
+	_, err := io.Copy(c.conn, f)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Copied bytes:", n)
 	return nil
 }
 
 func (c * Connection) SendZipFile(f io.ReadCloser) error {
-	n, err := io.Copy(c.conn, f)
+	_, err := io.Copy(c.conn, f)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Copied bytes:", n)
+	return nil
+}
+
+func (c * Connection) ReceiveZipFile(f io.Writer, size int64) error {
+	n, err := io.CopyN(f, c.conn, size)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Dumped bytes:", n)
 	return nil
 }
 
