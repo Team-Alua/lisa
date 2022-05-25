@@ -121,7 +121,7 @@ func executeCreate(cc *cecie.Connection, c * client.Content, rc * zip.ReadCloser
 	defer outZip.Close()
 	w := zip.NewWriter(outZip)
 	defer w.Close()
-	outRaw := fmt.Sprintf("PS4/SAVEDATA/%s/%s/%s", c.AccountId, c.Target.TitleId, c.Target.DirectoryName)
+	outRaw := fmt.Sprintf("PS4/SAVEDATA/%08x/%s/%s", c.AccountId, c.Target.TitleId, c.Target.DirectoryName)
 
 	exportFiles := []string{
 		outRaw + ".bin",
@@ -135,7 +135,6 @@ func executeCreate(cc *cecie.Connection, c * client.Content, rc * zip.ReadCloser
 
 	for index, fileName := range exportFiles {
 		wtr, err := w.Create(fileName)
-		fmt.Println(fmt.Sprintf("name: %s size: %d", fileName, exportFileSizes[index]))
 		if err != nil {
 			return zipName, err
 		}

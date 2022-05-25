@@ -66,11 +66,10 @@ func (c * Connection) SendZipFile(f io.ReadCloser) error {
 }
 
 func (c * Connection) ReceiveZipFile(f io.Writer, size int64) error {
-	n, err := io.CopyN(f, c.conn, size)
+	_, err := io.CopyN(f, c.conn, size)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Dumped bytes:", n)
 	return nil
 }
 

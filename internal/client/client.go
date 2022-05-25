@@ -8,7 +8,7 @@ type ContentTarget struct {
 
 type Content struct {
 	Type string `yaml:"Type"`
-	AccountId string `yaml:"AccountId"`
+	AccountId uint64 `yaml:"AccountId"`
 	Target *ContentTarget `yaml:"Target"`
 }
 

@@ -69,6 +69,25 @@ func generateRandomFileName() string {
 
 }
 
+func uploadZip(clientConn net.Conn, zipPath string) error {
+	info, err := os.Stat(zipPath)
+	if err != nil {
+		return err
+	}
+	zipSize := info.Size()
+	err = binary.Write(clientConn, binary.LittleEndian, &zipSize)
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(zipPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_ , err = io.Copy(clientConn, f)
+	return err
+}
+
 func downloadZip(clientConn net.Conn) (string, error) {
 
 	var zipSize int64
@@ -147,7 +166,6 @@ func handleCommandExecution(clientConn net.Conn, cecieIpPort string, rc * zip.Re
 }
 
 func handleRequest(clientConn net.Conn, rr chan*reservation.Request, cecieIpPort string) {
-	fmt.Println("Handling new request!")
 	defer clientConn.Close()
 
 	zipName, err := downloadZip(clientConn)
@@ -160,13 +178,9 @@ func handleRequest(clientConn net.Conn, rr chan*reservation.Request, cecieIpPort
 		fmt.Println(err)
 		return
 	}
-	defer func() {
-		os.Remove(zipName)
-	}()
+	defer os.Remove(zipName)
 
 	defer rc.Close()
-
-	// defer os.Remove(zipName)
 
 	err = validator.CheckZip(rc)
 	if err != nil {
@@ -174,8 +188,15 @@ func handleRequest(clientConn net.Conn, rr chan*reservation.Request, cecieIpPort
 		return
 	} 
 	outZip, err := handleCommandExecution(clientConn, cecieIpPort,  rc, rr)
-	fmt.Println(outZip, err)
-	clientConn.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer os.Remove(outZip)
+	err = uploadZip(clientConn, outZip)
+	if err != nil {
+		fmt.Println(err)
+	}
 	// Send back response
 }
 

@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"errors"
 	"strings"
+	"fmt"
 )
 
 func checkContentFileTarget(ct *client.ContentTarget) error {
@@ -38,7 +39,8 @@ func checkContentFile(content * client.Content) error {
 	}
 
 	accountIdRegex := regexp.MustCompile(`(0x)?[0-9a-f]{16}`)
-	if !accountIdRegex.MatchString(content.AccountId) {
+	accountId := fmt.Sprintf("%08x", content.AccountId)
+	if !accountIdRegex.MatchString(accountId) {
 		return errors.New("Invalid AccountId supplied")
 	}
 
