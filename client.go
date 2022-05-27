@@ -198,6 +198,7 @@ func handleRequest(clientConn net.Conn, rr chan*reservation.Request, cecieIpPort
 		fmt.Println(err)
 	}
 	// Send back response
+	return
 }
 
 
